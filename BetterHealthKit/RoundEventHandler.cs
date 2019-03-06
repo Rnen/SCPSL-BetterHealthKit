@@ -19,31 +19,31 @@ namespace BHK
 
 	class DamageEvent : IEventHandlerPlayerHurt
 	{
-		Dictionary<int, HealPlayer> healingPlayers => RoundEventHandler.healingPlayers;
+		Dictionary<int, HealPlayer> HealingPlayers => RoundEventHandler.healingPlayers;
 
 		public void OnPlayerHurt(PlayerHurtEvent ev)
 		{
-			if(healingPlayers.ContainsPlayer(ev.Player))
+			if(HealingPlayers.ContainsPlayer(ev.Player))
 			{
-				healingPlayers[ev.Player.PlayerId].finished = true;
+				HealingPlayers[ev.Player.PlayerId].finished = true;
 			}
 		}
 	}
 
-	class RoundEventHandler : IEventHandlerMedkitUse, IEventHandlerUpdate, IEventHandlerRoundStart
+	class RoundEventHandler : IEventHandlerMedkitUse, IEventHandlerUpdate
 	{
 		private readonly BetterHealthKits plugin;
 		public static Dictionary<int,HealPlayer> healingPlayers = new Dictionary<int, HealPlayer>();
 
-		public static float healInterval = 2;
-		public static int healAmount = 3;
-		public static int totalKitAmount = -1;
+		static float HealInterval => BetterHealthKits.healInterval;
+		static int HealAmount => BetterHealthKits.healAmount;
+		static int TotalKitAmount => BetterHealthKits.totalKitAmount;
 
 		public RoundEventHandler(BetterHealthKits plugin) => this.plugin = plugin;
 
 		public void OnMedkitUse(PlayerMedkitUseEvent ev)
 		{
-			int amount = (totalKitAmount > 0) ? totalKitAmount : ev.RecoverHealth;
+			int amount = (TotalKitAmount > 0) ? TotalKitAmount : ev.RecoverHealth;
 			if (healingPlayers.ContainsPlayer(ev.Player))
 			{
 				HealPlayer hp = healingPlayers[ev.Player.PlayerId];
@@ -94,10 +94,10 @@ namespace BHK
 								}
 								else if (healP.HealTotalAmount > 0)
 								{
-									if (healP.HealTotalAmount > healAmount)
+									if (healP.HealTotalAmount > HealAmount)
 									{
-										p.AddHealth(healAmount);
-										healP.HealTotalAmount -= healAmount;
+										p.AddHealth(HealAmount);
+										healP.HealTotalAmount -= HealAmount;
 									}
 									else
 									{
@@ -109,15 +109,23 @@ namespace BHK
 									p.SetHealth(p.TeamRole.MaxHP);
 							}
 						}
-					secTimer = DateTime.Now.AddSeconds(healInterval);
+					secTimer = DateTime.Now.AddSeconds(HealInterval);
 				}
 		}
+	}
 
-		public void OnRoundStart(RoundStartEvent ev)
+	class EarlyWaitinForPlayers : IEventHandlerWaitingForPlayers
+	{
+		private readonly BetterHealthKits plugin;
+		public EarlyWaitinForPlayers(BetterHealthKits plugin) => this.plugin = plugin;
+
+		public void OnWaitingForPlayers(WaitingForPlayersEvent ev)
 		{
-			healInterval = plugin.GetConfigFloat("BHK_HEAL_INTERVAL");
-			healAmount = plugin.GetConfigInt("BHK_HEAL_AMOUNT");
-			totalKitAmount = plugin.GetConfigInt("BHK_KIT_HEAL_AMOUNT");
+			if (!plugin.GetConfigBool("BHK_ENABLED"))
+				PluginManager.Manager.DisablePlugin(plugin);
+			BetterHealthKits.healInterval = plugin.GetConfigFloat("BHK_HEAL_INTERVAL");
+			BetterHealthKits.healAmount = plugin.GetConfigInt("BHK_HEAL_AMOUNT");
+			BetterHealthKits.totalKitAmount = plugin.GetConfigInt("BHK_KIT_HEAL_AMOUNT");
 		}
 	}
 }
